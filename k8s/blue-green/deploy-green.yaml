@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: module3-green
+  namespace: apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: module3, color: green }
+  template:
+    metadata:
+      labels: { app: module3, color: green }
+    spec:
+      containers:
+        - name: web
+          image: sadyplabon/module-3-app:1.0.1   # <- update when testing switch
+          ports: [{ containerPort: 5000 }]
+

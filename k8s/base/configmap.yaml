@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: module3-config
+  namespace: apps
+data:
+  APP_BANNER: "Hello from Kubernetes!"
+

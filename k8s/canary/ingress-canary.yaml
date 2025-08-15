@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: module3-stable
+  namespace: apps
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: module3-canary.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: module3-stable-svc
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: module3-canary
+  namespace: apps
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "20"   # send 20% to canary
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: module3-canary.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: module3-canary-svc
+                port:
+                  number: 80
+

@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: module3-blue
+  namespace: apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: module3, color: blue }
+  template:
+    metadata:
+      labels: { app: module3, color: blue }
+    spec:
+      containers:
+        - name: web
+          image: sadyplabon/module-3-app:1.0.0
+          ports: [{ containerPort: 5000 }]
+

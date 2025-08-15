@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: module3-bluegreen-svc
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: module3
+    color: blue           # <- switch this label to 'green' to cutover
+  ports:
+    - port: 80
+      targetPort: 5000
+

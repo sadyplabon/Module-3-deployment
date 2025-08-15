@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: module3-bluegreen
+  namespace: apps
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: module3-bg.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: module3-bluegreen-svc
+                port:
+                  number: 80
+

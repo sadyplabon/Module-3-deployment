@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: module3-stable
+  namespace: apps
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: module3, track: stable } }
+  template:
+    metadata: { labels: { app: module3, track: stable } }
+    spec:
+      containers:
+        - name: web
+          image: sadyplabon/module-3-app:1.0.0
+          ports: [{ containerPort: 5000 }]
+

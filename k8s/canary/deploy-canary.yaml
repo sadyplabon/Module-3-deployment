@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: module3-canary
+  namespace: apps
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: module3, track: canary } }
+  template:
+    metadata: { labels: { app: module3, track: canary } }
+    spec:
+      containers:
+        - name: web
+          image: sadyplabon/module-3-app:1.0.1   # <- new version
+          ports: [{ containerPort: 5000 }]
+

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: module3-canary-svc
+  namespace: apps
+spec:
+  selector: { app: module3, track: canary }
+  ports: [{ port: 80, targetPort: 5000 }]
+
