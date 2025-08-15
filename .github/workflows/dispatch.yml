@@ -1,0 +1,29 @@
+name: Test dispatch
+
+on:
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: 'Select Environment'
+                required: true
+                default: 'staging'
+                type: choice
+                options:
+                    - staging
+                    - production
+
+jobs:
+    clean_everything:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Cleaning The DB
+              run: echo "Cleaning The databases"
+            
+            - name: Print The Selected Environment
+              if: ${{ github.event.inputs.environment == 'staging'}}
+              run: echo "Environment Is Staging"
+            - name: If Environment Is production
+              if: ${{ github.event.inputs.environment == 'production'}}
+              run: echo "Environment Is Production"
+
+
