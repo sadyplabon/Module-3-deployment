@@ -1,0 +1,94 @@
+name: CICD pipeline
+
+on:
+  push:
+
+  
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Checkout the repo
+              uses: actions/checkout@v3
+            
+            - name: Install Node Js
+              uses: actions/setup-node@v4
+              with:
+                node-version: "22"
+            - name: Install pakages
+              run: npm install
+            
+            - name: Test The applications
+              run: npm run check
+    
+    build:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Checkout the repo
+              uses: actions/checkout@v3
+            
+            - name: Install Node Js
+              uses: actions/setup-node@v4
+              with:
+                node-version: "22"
+
+
+            - name: Create The Artifact file
+              run: |
+                mkdir build
+                cd build
+                echo "Hello World" > hello.txt
+            
+            - name: Upload The Artiface
+              uses: actions/upload-artifact@v4
+              with:
+                name: build_folder
+                path: ./build
+
+
+
+
+    deploy:
+        needs: build
+        runs-on: self-hosted
+        steps:
+            - name: Checkout The Code
+              uses: actions/checkout@v3
+
+            - name: Receive The Artiface
+              uses: actions/download-artifact@v4
+              with:
+                name: build_folder
+                path: ./test
+            
+            - name: Show The Artiface
+              run: |
+                ls -a
+
+            - name: Install The Package
+              run: npm install
+            
+            - name: Run The Application By PM2
+              run: |
+                ls -a
+                pm2 status
+                # delete node-app process
+                pm2 delete node-app || true
+
+                # pm2 restart all
+
+
+                # Create a Background process name node-app
+                pm2 start "npm start" --name="node-app"
+
+                # Save The Process List.
+                pm2 save
+
+
+
+
+            
