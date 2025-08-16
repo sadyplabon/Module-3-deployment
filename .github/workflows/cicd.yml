@@ -1,94 +1,117 @@
-name: CICD pipeline
+name: CI/CD Pipeline
 
 on:
   push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-  
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        steps:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Checkout the repo
-              uses: actions/checkout@v3
-            
-            - name: Install Node Js
-              uses: actions/setup-node@v4
-              with:
-                node-version: "22"
-            - name: Install pakages
-              run: npm install
-            
-            - name: Test The applications
-              run: npm run check
-    
-    build:
-        needs: test
-        runs-on: ubuntu-latest
-        steps:
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
 
-            - name: Checkout the repo
-              uses: actions/checkout@v3
-            
-            - name: Install Node Js
-              uses: actions/setup-node@v4
-              with:
-                node-version: "22"
+      - name: Install dependencies
+        run: npm ci
 
+      - name: Run tests
+        run: npm test --if-present
 
-            - name: Create The Artifact file
-              run: |
-                mkdir build
-                cd build
-                echo "Hello World" > hello.txt
-            
-            - name: Upload The Artiface
-              uses: actions/upload-artifact@v4
-              with:
-                name: build_folder
-                path: ./build
+      - name: Lint/type check (optional)
+        run: |
+          npm run lint --if-present
+          npm run typecheck --if-present
 
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
 
+      - name: Install dependencies
+        run: npm ci
 
-    deploy:
-        needs: build
-        runs-on: self-hosted
-        steps:
-            - name: Checkout The Code
-              uses: actions/checkout@v3
+      # Adjust if your build output is not "dist"
+      - name: Build application
+        run: npm run build --if-present
 
-            - name: Receive The Artiface
-              uses: actions/download-artifact@v4
-              with:
-                name: build_folder
-                path: ./test
-            
-            - name: Show The Artiface
-              run: |
-                ls -a
+      - name: Upload build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app_build
+          path: |
+            dist/**
+            package.json
+            package-lock.json
+            ecosystem.config.js
+          if-no-files-found: warn
 
-            - name: Install The Package
-              run: npm install
-            
-            - name: Run The Application By PM2
-              run: |
-                ls -a
-                pm2 status
-                # delete node-app process
-                pm2 delete node-app || true
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Checkout (optional for deploy scripts)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-                # pm2 restart all
+      - name: Download build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app_build
+          path: ./release
 
+      # Optional: write .env from Secrets (edit as needed)
+      - name: Write environment file
+        run: |
+          echo "NODE_ENV=production" >> ./release/.env
+          # echo "API_URL=${{ secrets.API_URL }}" >> ./release/.env
+          # echo "SOME_KEY=${{ secrets.SOME_KEY }}" >> ./release/.env
 
-                # Create a Background process name node-app
-                pm2 start "npm start" --name="node-app"
+      # Ensure Node/PM2 exist on the self-hosted runner beforehand.
+      - name: Install production deps from artifact
+        working-directory: ./release
+        run: npm ci --omit=dev
 
-                # Save The Process List.
-                pm2 save
+      # --- Option A: start via ecosystem.config.js (recommended) ---
+      # Provide an ecosystem.config.js in repo root, e.g.:
+      # module.exports = { apps: [{ name: "node-app", script: "dist/server.js", env: { PORT: 3000 } }] };
+      - name: Restart app with PM2 (ecosystem)
+        working-directory: ./release
+        run: |
+          pm2 status || true
+          pm2 startOrReload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+          pm2 save
 
+      # --- Option B: if you really want npm start (less robust), comment A and use below ---
+      # - name: Restart app with PM2 (npm start)
+      #   working-directory: ./release
+      #   run: |
+      #     pm2 delete node-app || true
+      #     pm2 start "npm start" --name "node-app"
+      #     pm2 save
 
-
-
-            
+      - name: Show PM2 status
+        run: pm2 status
