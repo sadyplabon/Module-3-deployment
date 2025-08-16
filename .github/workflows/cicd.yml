@@ -68,50 +68,27 @@ jobs:
             ecosystem.config.js
           if-no-files-found: warn
 
-  deploy:
+  docker-publish:
     needs: build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout (optional for deploy scripts)
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          fetch-depth: 0
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Download build Artifact
-        uses: actions/download-artifact@v4
+      - name: Build and push
+        uses: docker/build-push-action@v6
         with:
-          name: app_build
-          path: ./release
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/module-3-app:${{ github.sha }}
+          # optionally also: latest, or a semver tag
 
-      # Optional: write .env from Secrets (edit as needed)
-      - name: Write environment file
+      - name: Bump K8s manifests (optional step)
         run: |
-          echo "NODE_ENV=production" >> ./release/.env
-          # echo "API_URL=${{ secrets.API_URL }}" >> ./release/.env
-          # echo "SOME_KEY=${{ secrets.SOME_KEY }}" >> ./release/.env
-
-      # Ensure Node/PM2 exist on the self-hosted runner beforehand.
-      - name: Install production deps from artifact
-        working-directory: ./release
-        run: npm ci --omit=dev
-
-      # --- Option A: start via ecosystem.config.js (recommended) ---
-      # Provide an ecosystem.config.js in repo root, e.g.:
-      # module.exports = { apps: [{ name: "node-app", script: "dist/server.js", env: { PORT: 3000 } }] };
-      - name: Restart app with PM2 (ecosystem)
-        working-directory: ./release
-        run: |
-          pm2 status || true
-          pm2 startOrReload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
-          pm2 save
-
-      # --- Option B: if you really want npm start (less robust), comment A and use below ---
-      # - name: Restart app with PM2 (npm start)
-      #   working-directory: ./release
-      #   run: |
-      #     pm2 delete node-app || true
-      #     pm2 start "npm start" --name "node-app"
-      #     pm2 save
-
-      - name: Show PM2 status
-        run: pm2 status
+          # use yq/sed to update image tag in k8s manifests, commit to repo
+          # Argo CD will detect the change and sync
